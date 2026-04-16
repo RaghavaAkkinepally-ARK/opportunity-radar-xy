@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🚀 OpportunityRadar X
 
-## Getting Started
+**Autonomous AI Career Strategist**
 
-First, run the development server:
+OpportunityRadar X is a premium career strategist platform built with Next.js. it helps users analyze job opportunities, predict acceptance probabilities, and generate personalized application content using AI.
 
+## 🛠️ Getting Started on Another Computer
+
+If you want to run this project on a different machine, follow these steps:
+
+### 1. Prerequisites
+- [Node.js](https://nodejs.org/) (Version 18 or higher recommended)
+- [Git](https://git-scm.com/)
+
+### 2. Setup
+Clone the repository and enter the directory:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/RaghavaAkkinepally-ARK/opportunity-radar-xy.git
+cd opportunity-radar-xy
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 3. Install Dependencies
+Run this command to install all required packages:
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 4. Run the Application
+You have two options to run the app:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+#### Option A: Development Mode (Best for editing)
+```bash
+npm run dev
+```
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-## Learn More
+#### Option B: Production Mode (Best for performance)
+```bash
+npm run build
+npm run start
+```
 
-To learn more about Next.js, take a look at the following resources:
+## 🧠 Key Features
+- **AI Matching**: Automated skill-gap analysis.
+- **Outcome Simulation**: "What-If" scenarios for job applications.
+- **WhatsApp Share**: Integrated social sharing for career roles.
+- **Content Generation**: Automated cover letters and cold emails.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 📂 Project Structure
+- `/app`: Main page routes and layouts.
+- `/components`: UI components (AICoach, CareerCard, PredictionEngine).
+- `/lib`: Core logic and AI scoring algorithms.
+- `/types`: TypeScript definitions.
