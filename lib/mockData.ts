@@ -24,26 +24,106 @@ export const mockOpportunities: Opportunity[] = [
     requirements: ["React", "TypeScript", "Tailwind CSS", "1+ years experience"],
     type: "Full-time",
     postedAt: "2 hours ago",
-    salary: "80000"
+    salary: "80,000",
+    url: "https://www.linkedin.com/jobs/search/?keywords=frontend%20developer"
   },
   {
     id: "2",
-    title: "Software Engineering Intern",
-    company: "Google",
-    description: "Work on large-scale distributed systems and user-facing features.",
-    requirements: ["Algorithms", "Data Structures", "Python/Java", "Enrolled in Degree"],
-    type: "Internship",
-    postedAt: "1 day ago",
-    salary: "45/hr"
+    title: "Python Backend Engineer",
+    company: "DataStream",
+    description: "Scale high-performance data pipelines using Python, FastAPI, and PostgreSQL.",
+    requirements: ["Python", "FastAPI", "SQL", "Cloud Native"],
+    type: "Full-time",
+    postedAt: "5 hours ago",
+    salary: "95,000",
+    url: "https://www.linkedin.com/jobs/search/?keywords=python%20backend"
   },
   {
     id: "3",
-    title: "Product Designer",
-    company: "Startup Co",
-    description: "Design beautiful and functional user experiences for a fast-growing startup.",
-    requirements: ["Figma", "UI/UX Design", "Component Library", "Fast Learner"],
+    title: "Software Engineering Intern",
+    company: "Google",
+    description: "Work on large-scale distributed systems and user-facing features.",
+    requirements: ["Algorithms", "Data Structures", "C++", "Python"],
+    type: "Internship",
+    postedAt: "1 day ago",
+    salary: "$45/hr",
+    url: "https://www.linkedin.com/jobs/search/?keywords=google%20intern"
+  },
+  {
+    id: "4",
+    title: "Machine Learning Researcher",
+    company: "Neuro-Sync",
+    description: "Training large language models and optimizing inference speeds at scale.",
+    requirements: ["Python", "PyTorch", "Transformers", "CUDA"],
     type: "Full-time",
-    postedAt: "3 days ago",
-    salary: "75000"
+    postedAt: "10 mins ago",
+    salary: "140,000",
+    url: "https://www.linkedin.com/jobs/search/?keywords=machine%20learning"
+  },
+  {
+    id: "5",
+    title: "UI/UX Product Designer",
+    company: "Canvas Design",
+    description: "Create pixel-perfect designs and user flows for mobile and web apps.",
+    requirements: ["Figma", "UI/UX Design", "Prototyping"],
+    type: "Hybrid",
+    postedAt: "6 hours ago",
+    salary: "85,000",
+    url: "https://www.linkedin.com/jobs/search/?keywords=ui%20ux%20designer"
+  },
+  {
+    id: "6",
+    title: "Cloud Infrastructure Lead",
+    company: "Velocity Cloud",
+    description: "Orchestrate Kubernetes clusters and manage global AWS infrastructure.",
+    requirements: ["AWS", "Kubernetes", "Terraform", "Go"],
+    type: "Remote",
+    postedAt: "4 hours ago",
+    salary: "160,000",
+    url: "https://www.linkedin.com/jobs/search/?keywords=cloud%20infrastructure"
+  },
+  {
+    id: "7",
+    title: "Django Developer",
+    company: "WebFlow Solutions",
+    description: "Building robust e-commerce backends using the Django framework.",
+    requirements: ["Python", "Django", "PostgreSQL", "Redis"],
+    type: "Full-time",
+    postedAt: "8 hours ago",
+    salary: "90,000",
+    url: "https://www.linkedin.com/jobs/search/?keywords=django%20developer"
+  },
+  {
+    id: "8",
+    title: "AI Integrations Engineer",
+    company: "Agent-X",
+    description: "Integrating LLMs into automation workflows and enterprise legacy systems.",
+    requirements: ["Python", "LangChain", "OpenAI API", "Vector DBs"],
+    type: "Full-time",
+    postedAt: "1 hour ago",
+    salary: "110,000",
+    url: "https://www.linkedin.com/jobs/search/?keywords=ai%20engineer"
+  },
+  {
+    id: "9",
+    title: "Junior Data Analyst",
+    company: "Insight Analytics",
+    description: "Analyze market trends and visualize complex data sets for client reports.",
+    requirements: ["Python", "Pandas", "Tableau", "Statistics"],
+    type: "Full-time",
+    postedAt: "12 hours ago",
+    salary: "70,000",
+    url: "https://www.linkedin.com/jobs/search/?keywords=data%20analyst"
+  },
+  {
+    id: "10",
+    title: "DevOps Engineer",
+    company: "Streamline Tech",
+    description: "Automate CI/CD pipelines and ensure 99.99% uptime for global services.",
+    requirements: ["Docker", "Jenkins", "Python", "Shell Scripting"],
+    type: "Full-time",
+    postedAt: "1 day ago",
+    salary: "105,000",
+    url: "https://www.linkedin.com/jobs/search/?keywords=devops%20engineer"
   }
 ];

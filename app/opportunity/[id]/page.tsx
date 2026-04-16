@@ -9,6 +9,8 @@ import { AnalysisResult, SimulationResult, ApplicationContent } from "@/types";
 import { analyzeOpportunity, simulateOutcome, generateContent } from "@/lib/ai";
 import { ChevronLeft, Share2, Printer, MapPin, Briefcase, DollarSign, Calendar, Sparkles, Wand2, FileText, Mail, CheckCircle, Copy } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { MemoryManager } from "@/lib/memory";
+import { Zap, TrendingUp, AlertTriangle, Target } from "lucide-react";
 
 export default function OpportunityDetailPage() {
   const { id } = useParams();
@@ -65,6 +67,8 @@ export default function OpportunityDetailPage() {
   };
 
   const handleLaunch = () => {
+    if (!opportunity) return;
+    MemoryManager.logAction('apply', opportunity.id as string);
     setLaunched(true);
     setTimeout(() => setLaunched(false), 3000);
   };
@@ -171,15 +175,35 @@ export default function OpportunityDetailPage() {
           {/* Side Panel: Decision & Content */}
           <aside className="space-y-8">
             <div className="p-8 border rounded-3xl bg-white dark:bg-gray-900 shadow-xl sticky top-28 space-y-8">
-              <div className="space-y-2">
-                <p className="text-xs font-black uppercase tracking-widest text-gray-400">AI Decision</p>
+              <div className="space-y-4">
+                <p className="text-xs font-black uppercase tracking-widest text-gray-400">Autonomous Decision</p>
                 <div className={cn(
                   "text-3xl font-black",
                   analysis?.decision === 'Apply Now' ? "text-green-500" : (analysis?.decision === 'Prepare First' ? "text-yellow-500" : "text-red-500")
                 )}>
                   {analysis?.decision || "Calculating..."}
                 </div>
-                <p className="text-sm text-gray-500">{analysis?.reasoning}</p>
+                
+                {analysis?.metrics && (
+                  <div className="space-y-3 pt-2">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-500 flex items-center gap-1"><TrendingUp size={14}/> Regret Score</span>
+                      <span className={cn("font-black", analysis.metrics.regretScore > 70 ? "text-orange-500" : "")}>{analysis.metrics.regretScore}%</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-500 flex items-center gap-1"><AlertTriangle size={14}/> Inaction Risk</span>
+                      <span className="font-black text-red-500">{analysis.metrics.riskOfInaction}%</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-500 flex items-center gap-1"><Zap size={14}/> Timing</span>
+                      <span className="font-black text-blue-500">{analysis.metrics.timingScore}%</span>
+                    </div>
+                  </div>
+                )}
+                
+                <p className="text-sm text-gray-500 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl border border-gray-100 dark:border-gray-800 italic">
+                  "{analysis?.reasoning}"
+                </p>
               </div>
 
               <div className="h-px bg-gray-100 dark:bg-gray-800" />

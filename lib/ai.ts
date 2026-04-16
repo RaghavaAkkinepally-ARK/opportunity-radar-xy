@@ -1,15 +1,18 @@
-import { AnalysisResult, SimulationResult, ApplicationContent, UserProfile, Opportunity } from "@/types";
+import { AnalysisResult, SimulationResult, ApplicationContent, UserProfile, Opportunity, DailySprint } from "@/types";
+import { calculateDecisionMetrics } from "./metrics";
 
 export const AI_PROMPTS = {
   DECISION_ENGINE: `
     You are an expert career strategist. Analyze the following user profile and opportunity.
+    Consider history: {history}
     User Profile: {userProfile}
     Opportunity: {opportunity}
+    
     Output a structured JSON response with:
     - matchScore (0-100)
     - acceptanceProbability (0-1)
     - decision ("Apply Now", "Prepare First", "Skip")
-    - reasoning (brief explanation)
+    - reasoning (concise, actionable, personalized)
     - missingSkills (list of skills needed)
   `,
   SIMULATION: `
@@ -33,28 +36,60 @@ export const AI_PROMPTS = {
   `
 };
 
-// Simulation of AI results for the demo
 export async function analyzeOpportunity(profile: UserProfile, opportunity: Opportunity): Promise<AnalysisResult> {
   // Simulate AI delay
   await new Promise(resolve => setTimeout(resolve, 800));
   
-  // Calculate matching skills
+  // Calculate matching skills using fuzzy intersection
   const matchingSkills = opportunity.requirements.filter(req => 
-    profile.skills.some(skill => skill.toLowerCase().includes(req.toLowerCase()) || req.toLowerCase().includes(skill.toLowerCase()))
+    profile.skills.some(skill => 
+      skill.toLowerCase().includes(req.toLowerCase()) || 
+      req.toLowerCase().includes(skill.toLowerCase())
+    )
   );
   
+  // Scoring logic: Skill Match (60%) + Goal Alignment (40%)
   const skillMatchRatio = matchingSkills.length / Math.max(opportunity.requirements.length, 1);
-  const matchedPoints = skillMatchRatio * 100;
+  const goalAlignment = profile.goals.some(goal => 
+    opportunity.title.toLowerCase().includes(goal.toLowerCase()) || 
+    opportunity.description.toLowerCase().includes(goal.toLowerCase())
+  ) ? 1 : 0.5;
+
+  const baseScore = (skillMatchRatio * 60) + (goalAlignment * 40);
+  const score = Math.min(100, Math.max(0, Math.floor(baseScore + (Math.random() * 5))));
   
-  // Add some variance but base it on real data
-  const score = Math.min(100, Math.max(0, Math.floor(matchedPoints + (Math.random() * 10 - 5))));
+  const metrics = calculateDecisionMetrics(profile, opportunity, score);
   
   return {
     matchScore: score,
     acceptanceProbability: score / 100,
-    decision: score > 80 ? "Apply Now" : (score > 60 ? "Prepare First" : "Skip"),
-    reasoning: `Matched ${matchingSkills.length} out of ${opportunity.requirements.length} core requirements. Your profile shows strength in ${matchingSkills.join(', ') || 'related areas'}.`,
-    missingSkills: opportunity.requirements.filter(req => !matchingSkills.includes(req)).slice(0, 2)
+    decision: score > 75 ? "Apply Now" : (score > 50 ? "Prepare First" : "Skip"),
+    reasoning: `${score}% match detected. ${goalAlignment === 1 ? "Strong alignment with your " + profile.goals[0] + " goal." : "General technical match."} ${metrics.regretScore > 80 ? "Critical yield loss if skipped." : ""}`,
+    missingSkills: opportunity.requirements.filter(req => !matchingSkills.includes(req)).slice(0, 2),
+    metrics
+  };
+}
+
+export function rankOpportunities(profile: UserProfile, results: Record<string, AnalysisResult>): string[] {
+  return Object.keys(results).sort((a, b) => {
+    const scoreA = results[a].matchScore + results[a].metrics.regretScore;
+    const scoreB = results[b].matchScore + results[b].metrics.regretScore;
+    return scoreB - scoreA;
+  });
+}
+
+export function generateDailySprints(profile: UserProfile, opportunities: Opportunity[], analyses: Record<string, AnalysisResult>): DailySprint {
+  const topOpp = opportunities.find(o => analyses[o.id]?.decision === 'Apply Now') || opportunities[0];
+  const primaryGoal = profile.goals[0] || "Career Growth";
+  
+  return {
+    priorityActions: [
+      `Execute application for ${topOpp.company} (${analyses[topOpp.id]?.matchScore}% alignment)`,
+      `Close skill gap: Focus on ${topOpp.requirements.find(r => !profile.skills.includes(r)) || "Advanced System Design"}`,
+      `Sync ${primaryGoal} roadmap with current market volatility`
+    ],
+    quickWin: `Optimize LinkedIn for "${primaryGoal}" keywords`,
+    longTermMove: `Architect a trajectory toward ${primaryGoal} by Q4`
   };
 }
 

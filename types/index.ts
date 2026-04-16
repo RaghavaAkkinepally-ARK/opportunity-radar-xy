@@ -4,6 +4,7 @@ export interface UserProfile {
   cgpa: number;
   goals: string[];
   experience: Experience[];
+  linkedinUrl?: string;
 }
 
 export interface Experience {
@@ -22,6 +23,7 @@ export interface Opportunity {
   type: 'Full-time' | 'Internship' | 'Project';
   postedAt: string;
   salary?: string;
+  url: string;
 }
 
 export interface AnalysisResult {
@@ -30,6 +32,21 @@ export interface AnalysisResult {
   decision: 'Apply Now' | 'Prepare First' | 'Skip';
   reasoning: string;
   missingSkills: string[];
+  metrics: DecisionMetrics;
+}
+
+export interface DecisionMetrics {
+  regretScore: number;
+  riskOfInaction: number;
+  confidenceScore: number;
+  timingScore: number;
+  futureTrajectory: string;
+}
+
+export interface DailySprint {
+  priorityActions: string[];
+  quickWin: string;
+  longTermMove: string;
 }
 
 export interface SimulationResult {

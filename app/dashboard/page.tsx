@@ -5,34 +5,73 @@ import { motion, AnimatePresence } from "framer-motion";
 import { CareerCard } from "@/components/CareerCard";
 import { AICoach } from "@/components/AICoach";
 import { mockOpportunities, mockUserProfile } from "@/lib/mockData";
-import { AnalysisResult, Opportunity } from "@/types";
-import { analyzeOpportunity } from "@/lib/ai";
+import { AnalysisResult, Opportunity, UserProfile, DailySprint } from "@/types";
+import { analyzeOpportunity, generateDailySprints, rankOpportunities } from "@/lib/ai";
 import { useRouter } from "next/navigation";
-import { Search, Bell, Settings, LayoutDashboard, BrainCircuit, Sparkles } from "lucide-react";
+import { Search, Bell, Settings, LayoutDashboard, BrainCircuit, Sparkles, Zap, Target, TrendingUp } from "lucide-react";
 
 export default function Dashboard() {
   const router = useRouter();
+  const [profile, setProfile] = useState<UserProfile>(mockUserProfile);
+  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
+  const [rankedOrder, setRankedOrder] = useState<string[]>([]);
   const [analyses, setAnalyses] = useState<Record<string, AnalysisResult>>({});
+  const [sprint, setSprint] = useState<DailySprint | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [showReadiness, setShowReadiness] = useState(false);
 
   useEffect(() => {
-    async function loadAnalyses() {
-      const results: Record<string, AnalysisResult> = {};
-      for (const opp of mockOpportunities) {
-        results[opp.id] = await analyzeOpportunity(mockUserProfile, opp);
+    // Load profile from local storage
+    const stored = localStorage.getItem("opportunity_radar_user");
+    let currentProfile = mockUserProfile;
+    if (stored) {
+      try {
+        currentProfile = JSON.parse(stored);
+        setProfile(currentProfile);
+      } catch (e) {
+        console.error("Failed to parse stored profile", e);
       }
-      setAnalyses(results);
-      setLoading(false);
     }
-    loadAnalyses();
+
+    async function initializeSystem() {
+      try {
+        // Fetch real jobs from API layer with personalization
+        const prefSkills = currentProfile.skills.join(',');
+        const prefGoals = currentProfile.goals.join(',');
+        const res = await fetch(`/api/jobs?skills=${encodeURIComponent(prefSkills)}&goals=${encodeURIComponent(prefGoals)}`);
+        
+        const data = await res.json();
+        const fetchedJobs = data.jobs;
+        setOpportunities(fetchedJobs);
+
+        const results: Record<string, AnalysisResult> = {};
+        for (const opp of fetchedJobs) {
+          results[opp.id] = await analyzeOpportunity(currentProfile, opp);
+        }
+        
+        const rank = rankOpportunities(currentProfile, results);
+        const engineSprint = generateDailySprints(currentProfile, fetchedJobs, results);
+        
+        setAnalyses(results);
+        setRankedOrder(rank);
+        setSprint(engineSprint);
+        setLoading(false);
+      } catch (error) {
+        console.error("System initialization failed", error);
+        setLoading(false);
+      }
+    }
+    initializeSystem();
   }, []);
 
-  const filteredOpportunities = mockOpportunities.filter(opp => 
-    opp.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    opp.company.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const sortedOpportunities = rankedOrder
+    .map(id => opportunities.find(o => o.id === id)!)
+    .filter(opp => opp !== undefined)
+    .filter(opp => 
+      opp.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      opp.company.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
   return (
     <div className="min-h-screen bg-white dark:bg-black text-black dark:text-white">
@@ -49,12 +88,15 @@ export default function Dashboard() {
       <main className="pl-20">
         {/* Header */}
         <header className="h-20 border-b flex items-center justify-between px-8 bg-white/50 dark:bg-black/20 backdrop-blur-sm sticky top-0 z-40">
-          <h1 className="text-2xl font-black">OPPORTUNITY RADAR X</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-black">OPPORTUNITY RADAR</h1>
+            <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 text-[10px] font-bold rounded-full border border-blue-200 dark:border-blue-800">AUTONOMOUS V1</span>
+          </div>
           <div className="flex items-center gap-6">
             <div className="relative group">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors" size={18} />
               <input 
-                placeholder="Search potential careers..." 
+                placeholder="Search engine knowledge..." 
                 className="bg-gray-100 dark:bg-gray-900 border-none rounded-2xl pl-10 pr-4 py-2 w-64 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -64,7 +106,15 @@ export default function Dashboard() {
               <Bell size={24} />
               <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-black"></span>
             </button>
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 border-2 border-white dark:border-gray-800"></div>
+            <div className="flex items-center gap-3">
+              <div className="text-right hidden md:block">
+                <p className="text-sm font-black">{profile.name || "Guest"}</p>
+                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Premium Member</p>
+              </div>
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 border-2 border-white dark:border-gray-800 flex items-center justify-center text-white font-bold">
+                {profile.name ? profile.name[0] : "G"}
+              </div>
+            </div>
           </div>
         </header>
 
@@ -79,20 +129,21 @@ export default function Dashboard() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredOpportunities.map((opp) => (
-                <CareerCard
-                  key={opp.id}
-                  opportunity={opp}
-                  matchScore={analyses[opp.id]?.matchScore || 0}
-                  probability={analyses[opp.id]?.acceptanceProbability || 0}
-                  decision={analyses[opp.id]?.decision || 'Skip'}
-                  onClick={() => router.push(`/opportunity/${opp.id}`)}
-                />
-              ))}
-              {filteredOpportunities.length === 0 && (
-                <div className="col-span-full py-20 text-center border-2 border-dashed rounded-3xl text-gray-500">
-                  No matches found for "{searchQuery}". Try a different focus.
-                </div>
+              {loading ? (
+                Array(3).fill(0).map((_, i) => (
+                  <div key={i} className="h-64 rounded-3xl bg-gray-100 dark:bg-gray-900 animate-pulse" />
+                ))
+              ) : (
+                sortedOpportunities.map((opp) => (
+                  <CareerCard
+                    key={opp.id}
+                    opportunity={opp}
+                    matchScore={analyses[opp.id]?.matchScore || 0}
+                    probability={analyses[opp.id]?.acceptanceProbability || 0}
+                    decision={analyses[opp.id]?.decision || 'Skip'}
+                    onClick={() => router.push(`/opportunity/${opp.id}`)}
+                  />
+                ))
               )}
             </div>
           </section>
@@ -102,13 +153,20 @@ export default function Dashboard() {
             <div className="lg:col-span-2 space-y-8">
               <div className="p-8 border rounded-3xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-2xl overflow-hidden relative group">
                 <div className="relative z-10">
-                  <h3 className="text-3xl font-black mb-4">Your Career Readiness: Optimal.</h3>
-                  <p className="text-blue-100 text-lg mb-6 max-w-md">Our prediction engine indicates a 85% success rate for Frontend roles this quarter. Keep building.</p>
+                  <h3 className="text-3xl font-black mb-4 flex items-center gap-3"><Zap /> Daily Sprint.</h3>
+                  <div className="space-y-4 mb-6">
+                    {sprint?.priorityActions.map((action, i) => (
+                      <div key={i} className="flex items-center gap-3 bg-white/10 backdrop-blur-md p-3 rounded-xl border border-white/20">
+                        <Target size={18} className="text-blue-200" />
+                        <span className="font-bold">{action}</span>
+                      </div>
+                    ))}
+                  </div>
                   <button 
                     onClick={() => setShowReadiness(true)}
                     className="bg-white text-blue-600 font-bold px-8 py-4 rounded-2xl hover:bg-blue-50 transition-colors shadow-lg"
                   >
-                    View Readiness Report
+                    View Confidence Report
                   </button>
                 </div>
                 <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-white/10 to-transparent translate-x-1/2 -rotate-12 group-hover:translate-x-1/3 transition-transform"></div>
@@ -116,20 +174,20 @@ export default function Dashboard() {
 
               <div className="grid grid-cols-2 gap-6">
                 <div className="p-6 border rounded-2xl bg-gray-50 dark:bg-gray-900 border-none transition-transform hover:scale-[1.02]">
-                  <p className="text-sm font-bold uppercase tracking-widest text-blue-500 mb-2">Growth Target</p>
-                  <h4 className="text-xl font-bold">Micro-frontend Architecture</h4>
-                  <p className="text-gray-500 text-sm mt-2">Required for High-Probability roles at Enterprise startups.</p>
+                  <p className="text-sm font-bold uppercase tracking-widest text-blue-500 mb-2">Quick Win</p>
+                  <h4 className="text-xl font-bold">{sprint?.quickWin || "Analyzing..."}</h4>
+                  <p className="text-gray-500 text-sm mt-2">Zero friction move for immediate impact.</p>
                 </div>
                 <div className="p-6 border rounded-2xl bg-gray-50 dark:bg-gray-900 border-none transition-transform hover:scale-[1.02]">
-                  <p className="text-sm font-bold uppercase tracking-widest text-purple-500 mb-2">Daily Sprint</p>
-                  <h4 className="text-xl font-bold">Fix Performance Lag</h4>
-                  <p className="text-gray-500 text-sm mt-2">Improve lighthouse scores on your Portfolio Project.</p>
+                  <p className="text-sm font-bold uppercase tracking-widest text-purple-500 mb-2">Long-term Move</p>
+                  <h4 className="text-xl font-bold">{sprint?.longTermMove || "Calculating..."}</h4>
+                  <p className="text-gray-500 text-sm mt-2">Strategic positioning for the intelligence economy.</p>
                 </div>
               </div>
             </div>
 
             <div className="sticky top-28 h-fit">
-              <AICoach />
+              <AICoach profile={profile} />
             </div>
           </div>
         </div>
@@ -152,25 +210,29 @@ export default function Dashboard() {
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
               className="relative bg-white dark:bg-gray-900 p-8 rounded-3xl max-w-lg w-full shadow-2xl space-y-6"
             >
-              <h2 className="text-3xl font-black">Readiness Report</h2>
+              <h2 className="text-3xl font-black">Confidence Report</h2>
               <div className="space-y-4">
                 <div className="p-4 bg-blue-500/5 rounded-2xl">
-                  <p className="text-sm font-bold text-blue-500 uppercase mb-2">Skill Strength</p>
+                  <p className="text-sm font-bold text-blue-500 uppercase mb-2">Market Timing</p>
                   <div className="h-4 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-500 w-[90%]" />
+                    <div className="h-full bg-blue-500 w-[95%]" />
                   </div>
                 </div>
                 <div className="p-4 bg-purple-500/5 rounded-2xl">
-                  <p className="text-sm font-bold text-purple-500 uppercase mb-2">Project Impact</p>
+                  <p className="text-sm font-bold text-purple-500 uppercase mb-2">Decision Confidence</p>
                   <div className="h-4 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
-                    <div className="h-full bg-purple-500 w-[75%]" />
+                    <div className="h-full bg-purple-500 w-[88%]" />
                   </div>
                 </div>
               </div>
-              <p className="text-gray-500 italic">"Your profile is in the top 5% for Frontend Engineering roles in the APAC region. Recommended next step: AWS Certification."</p>
+              <div className="p-4 bg-orange-500/5 rounded-2xl border border-orange-500/20">
+                <p className="text-xs font-bold text-orange-600 uppercase mb-1">Inaction Risk</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">Staying put now results in a 12% loss in market value over next 6 months.</p>
+              </div>
+              <p className="text-gray-500 italic text-sm">"Autonomous analysis suggests your profile is optimized for a technical pivot. Timing is critical."</p>
               <button 
                 onClick={() => setShowReadiness(false)}
-                className="w-full py-4 bg-blue-600 text-white font-bold rounded-2xl"
+                className="w-full py-4 bg-blue-600 text-white font-bold rounded-2xl shadow-xl shadow-blue-500/20 active:scale-[0.98] transition-transform"
               >
                 Close Report
               </button>
