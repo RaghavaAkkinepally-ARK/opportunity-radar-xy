@@ -1,5 +1,6 @@
 import { AnalysisResult, SimulationResult, ApplicationContent, UserProfile, Opportunity, DailySprint } from "@/types";
 import { calculateDecisionMetrics } from "./metrics";
+import { UserHistory } from "./memory";
 
 export const AI_PROMPTS = {
   DECISION_ENGINE: `
@@ -14,31 +15,17 @@ export const AI_PROMPTS = {
     - decision ("Apply Now", "Prepare First", "Skip")
     - reasoning (concise, actionable, personalized)
     - missingSkills (list of skills needed)
-  `,
-  SIMULATION: `
-    Simulate the outcome of the user applying for this role.
-    User: {userProfile}
-    Role: {opportunity}
-    Output:
-    - successProbability (0-1)
-    - estimatedPrepTime (e.g. "2 weeks", "3 months")
-    - improvementSuggestions (list)
-    - outcomeDescription (what happens if they apply now)
-  `,
-  CONTENT_GEN: `
-    Generate application content for:
-    User: {userProfile}
-    Role: {opportunity}
-    Output:
-    - coverLetter (string)
-    - coldEmail (string)
-    - resumeSuggestions (list)
+    - microOptimizations (list of 2-3 small things to improve for this role)
   `
 };
 
-export async function analyzeOpportunity(profile: UserProfile, opportunity: Opportunity): Promise<AnalysisResult> {
+export async function analyzeOpportunity(
+  profile: UserProfile, 
+  opportunity: Opportunity, 
+  history?: UserHistory
+): Promise<AnalysisResult> {
   // Simulate AI delay
-  await new Promise(resolve => setTimeout(resolve, 800));
+  await new Promise(resolve => setTimeout(resolve, 600));
   
   // Calculate matching skills using fuzzy intersection
   const matchingSkills = opportunity.requirements.filter(req => 
@@ -53,63 +40,86 @@ export async function analyzeOpportunity(profile: UserProfile, opportunity: Oppo
   const goalAlignment = profile.goals.some(goal => 
     opportunity.title.toLowerCase().includes(goal.toLowerCase()) || 
     opportunity.description.toLowerCase().includes(goal.toLowerCase())
-  ) ? 1 : 0.5;
+  ) ? 1 : 0.6;
 
-  const baseScore = (skillMatchRatio * 60) + (goalAlignment * 40);
-  const score = Math.min(100, Math.max(0, Math.floor(baseScore + (Math.random() * 5))));
+  // History Multiplier: If they've applied to similar roles, boost confidence
+  const historicalBias = history?.appliedJobs.length ? 1.05 : 1.0;
+
+  const baseScore = ((skillMatchRatio * 60) + (goalAlignment * 40)) * historicalBias;
+  const score = Math.min(100, Math.max(0, Math.floor(baseScore + (Math.random() * 3))));
   
   const metrics = calculateDecisionMetrics(profile, opportunity, score);
   
+  // Intelligence Logic: Reasoning based on metrics
+  let reasoning = `${score}% technical alignment detected. `;
+  if (metrics.regretScore > 85) reasoning += `Critical yield loss (Regret: ${metrics.regretScore}) if this role is ignored. `;
+  if (metrics.timingScore > 90) reasoning += `High priority window: Role is fresh. `;
+  if (goalAlignment === 1) reasoning += `Perfectly fits your goal: ${profile.goals[0]}. `;
+
   return {
     matchScore: score,
-    acceptanceProbability: score / 100,
-    decision: score > 75 ? "Apply Now" : (score > 50 ? "Prepare First" : "Skip"),
-    reasoning: `${score}% match detected. ${goalAlignment === 1 ? "Strong alignment with your " + profile.goals[0] + " goal." : "General technical match."} ${metrics.regretScore > 80 ? "Critical yield loss if skipped." : ""}`,
-    missingSkills: opportunity.requirements.filter(req => !matchingSkills.includes(req)).slice(0, 2),
+    acceptanceProbability: Math.min(0.99, (score / 100) * 1.1), // Adjusted for market variance
+    decision: score > 80 ? "Apply Now" : (score > 60 ? "Prepare First" : "Skip"),
+    reasoning: reasoning.trim(),
+    missingSkills: opportunity.requirements.filter(req => !matchingSkills.includes(req)).slice(0, 3),
     metrics
   };
 }
 
 export function rankOpportunities(profile: UserProfile, results: Record<string, AnalysisResult>): string[] {
   return Object.keys(results).sort((a, b) => {
-    const scoreA = results[a].matchScore + results[a].metrics.regretScore;
-    const scoreB = results[b].matchScore + results[b].metrics.regretScore;
-    return scoreB - scoreA;
+    // Rank by Weighted Score: 40% Match + 30% Regret + 20% Inaction Risk + 10% Timing
+    const rankA = (results[a].matchScore * 0.4) + (results[a].metrics.regretScore * 0.3) + (results[a].metrics.riskOfInaction * 0.2) + (results[a].metrics.timingScore * 0.1);
+    const rankB = (results[b].matchScore * 0.4) + (results[b].metrics.regretScore * 0.3) + (results[b].metrics.riskOfInaction * 0.2) + (results[b].metrics.timingScore * 0.1);
+    return rankB - rankA;
   });
 }
 
 export function generateDailySprints(profile: UserProfile, opportunities: Opportunity[], analyses: Record<string, AnalysisResult>): DailySprint {
   const topOpp = opportunities.find(o => analyses[o.id]?.decision === 'Apply Now') || opportunities[0];
-  const primaryGoal = profile.goals[0] || "Career Growth";
+  const highRegretOpp = opportunities.find(o => (analyses[o.id]?.metrics.regretScore || 0) > 80);
   
+  const actions = [
+    `Complete application for ${topOpp.company} - ${analyses[topOpp.id]?.matchScore || 70}% match score.`,
+    `Review requirements for ${topOpp.title}: Focus on ${topOpp.requirements[0] || 'Technical Stack'}`,
+    `Connect with someone at ${topOpp.company} to increase acceptance probability.`
+  ];
+
+  if (highRegretOpp && highRegretOpp.id !== topOpp.id) {
+    actions[1] = `Analyze high-regret role at ${highRegretOpp.company} (Regret: ${analyses[highRegretOpp.id]?.metrics.regretScore})`;
+  }
+
   return {
-    priorityActions: [
-      `Execute application for ${topOpp.company} (${analyses[topOpp.id]?.matchScore}% alignment)`,
-      `Close skill gap: Focus on ${topOpp.requirements.find(r => !profile.skills.includes(r)) || "Advanced System Design"}`,
-      `Sync ${primaryGoal} roadmap with current market volatility`
-    ],
-    quickWin: `Optimize LinkedIn for "${primaryGoal}" keywords`,
-    longTermMove: `Architect a trajectory toward ${primaryGoal} by Q4`
+    priorityActions: actions,
+    quickWin: `Optimize LinkedIn profile for "${profile.skills.slice(0, 2).join(' & ')}" based on current market signals.`,
+    longTermMove: `Construct a roadmap to bridge the ${analyses[topOpp.id]?.missingSkills[0] || 'Advanced Architecture'} skill gap by next quarter.`
   };
 }
 
 export async function simulateOutcome(profile: UserProfile, opportunity: Opportunity): Promise<SimulationResult> {
-  await new Promise(resolve => setTimeout(resolve, 1500));
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  const rand = Math.random();
   
   return {
-    successProbability: 0.75,
-    estimatedPrepTime: "2 weeks",
-    improvementSuggestions: ["Build a project using Tailwind CSS", "Practice Mock Interviews"],
-    outcomeDescription: "You'll likely get past the initial screening but and reach the second round of interviews."
+    successProbability: 0.6 + (rand * 0.3),
+    estimatedPrepTime: rand > 0.5 ? "1 week" : "3 weeks",
+    improvementSuggestions: [
+      `Deep dive into ${opportunity.requirements[0] || 'System Design'} principles.`,
+      "Synthesize your previous project experience with this role's unique challenges."
+    ],
+    outcomeDescription: rand > 0.4 ? "High likelihood of progressing to the technical interview stage." : "Strong profile match, but expect deep scrutiny on your architectural decisions."
   };
 }
 
 export async function generateContent(profile: UserProfile, opportunity: Opportunity): Promise<ApplicationContent> {
-  await new Promise(resolve => setTimeout(resolve, 1200));
+  await new Promise(resolve => setTimeout(resolve, 1000));
   
   return {
-    coverLetter: `Dear Hiring Manager at ${opportunity.company},\n\nI am excited to apply for the ${opportunity.title} position...`,
-    coldEmail: `Hi ${opportunity.company} Team,\n\nI just applied for the ${opportunity.title} role and would love to...`,
-    resumeSuggestions: ["Highlight your React experience", "Add a section on performance optimization"]
+    coverLetter: `Dear Hiring Manager at ${opportunity.company},\n\nAs a specialist in ${profile.skills[0]} and ${profile.skills[1]}, I was immediately drawn to the ${opportunity.title} role. My experience building scalable solutions aligns perfectly with your requirements for ${opportunity.requirements.slice(0, 2).join(', ')}...`,
+    coldEmail: `Hi ${opportunity.company} Team,\n\nI've been following your work in the industry and noticed the ${opportunity.title} opening. Given my background in ${profile.skills[0]}, I believe I can contribute immediately...`,
+    resumeSuggestions: [
+      `Quantify your impact using ${profile.skills[0]} in your current/past roles.`,
+      `Highlight specific projects where you resolved challenges related to ${opportunity.requirements[0]}.`
+    ]
   };
 }

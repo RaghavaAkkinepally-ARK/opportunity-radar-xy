@@ -1,16 +1,16 @@
 import { Opportunity, UserProfile } from "@/types";
 
 export const mockUserProfile: UserProfile = {
-  name: "Jane Doe",
-  skills: ["React", "TypeScript", "Next.js", "Python", "Problem Solving", "UI/UX Design"],
-  cgpa: 3.8,
-  goals: ["Become a Senior Frontend Engineer", "Contribute to Open Source", "Build Scalable Apps"],
+  name: "Developer",
+  skills: ["Python", "FastAPI", "PostgreSQL", "React", "AWS", "LLMs"],
+  cgpa: 3.9,
+  goals: ["Build AI-powered backend systems", "Master cloud-native architecture", "Lead technical teams"],
   experience: [
     {
-      role: "Software Engineering Intern",
-      company: "TechCorp",
-      duration: "June 2023 - Aug 2023",
-      description: "Developed and maintained several React components for the core product."
+      role: "Python Developer",
+      company: "Innovate Labs",
+      duration: "Jan 2024 - Present",
+      description: "Architecting scalable data services and integrating generative AI models."
     }
   ]
 };

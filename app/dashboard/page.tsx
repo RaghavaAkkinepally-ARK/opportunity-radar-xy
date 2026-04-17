@@ -36,6 +36,8 @@ export default function Dashboard() {
 
     async function initializeSystem() {
       try {
+        const history = MemoryManager.getHistory();
+        
         // Fetch real jobs from API layer with personalization
         const prefSkills = currentProfile.skills.join(',');
         const prefGoals = currentProfile.goals.join(',');
@@ -47,7 +49,8 @@ export default function Dashboard() {
 
         const results: Record<string, AnalysisResult> = {};
         for (const opp of fetchedJobs) {
-          results[opp.id] = await analyzeOpportunity(currentProfile, opp);
+          // AI Logic now considers user behavior history (clicked/applied)
+          results[opp.id] = await analyzeOpportunity(currentProfile, opp, history);
         }
         
         const rank = rankOpportunities(currentProfile, results);
@@ -212,24 +215,46 @@ export default function Dashboard() {
             >
               <h2 className="text-3xl font-black">Confidence Report</h2>
               <div className="space-y-4">
-                <div className="p-4 bg-blue-500/5 rounded-2xl">
-                  <p className="text-sm font-bold text-blue-500 uppercase mb-2">Market Timing</p>
-                  <div className="h-4 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-500 w-[95%]" />
-                  </div>
-                </div>
-                <div className="p-4 bg-purple-500/5 rounded-2xl">
-                  <p className="text-sm font-bold text-purple-500 uppercase mb-2">Decision Confidence</p>
-                  <div className="h-4 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
-                    <div className="h-full bg-purple-500 w-[88%]" />
-                  </div>
-                </div>
+                {/* Dynamic Market Timing Calculation */}
+                {(() => {
+                  const avgTiming = Object.values(analyses).reduce((acc, a) => acc + a.metrics.timingScore, 0) / Math.max(Object.keys(analyses).length, 1);
+                  const avgConfidence = Object.values(analyses).reduce((acc, a) => acc + a.metrics.confidenceScore, 0) / Math.max(Object.keys(analyses).length, 1);
+                  const maxInactionRisk = Math.max(...Object.values(analyses).map(a => a.metrics.riskOfInaction), 0);
+                  const inactionPercent = Math.min(25, Math.floor(maxInactionRisk / 5)); // Scaled to a realistic percentage loss
+
+                  return (
+                    <>
+                      <div className="p-4 bg-blue-500/5 rounded-2xl">
+                        <p className="text-sm font-bold text-blue-500 uppercase mb-2">Market Timing Index</p>
+                        <div className="h-4 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
+                          <motion.div 
+                            initial={{ width: 0 }}
+                            animate={{ width: `${avgTiming}%` }}
+                            className="h-full bg-blue-500" 
+                          />
+                        </div>
+                      </div>
+                      <div className="p-4 bg-purple-500/5 rounded-2xl">
+                        <p className="text-sm font-bold text-purple-500 uppercase mb-2">Decision Confidence</p>
+                        <div className="h-4 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
+                          <motion.div 
+                            initial={{ width: 0 }}
+                            animate={{ width: `${avgConfidence}%` }}
+                            className="h-full bg-purple-500" 
+                          />
+                        </div>
+                      </div>
+                      <div className="p-4 bg-orange-500/5 rounded-2xl border border-orange-500/20">
+                        <p className="text-xs font-bold text-orange-600 uppercase mb-1">Do-Nothing Risk</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+                          Failing to act on current high-yield matches results in a {inactionPercent}% projected loss in market equity this quarter.
+                        </p>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
-              <div className="p-4 bg-orange-500/5 rounded-2xl border border-orange-500/20">
-                <p className="text-xs font-bold text-orange-600 uppercase mb-1">Inaction Risk</p>
-                <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">Staying put now results in a 12% loss in market value over next 6 months.</p>
-              </div>
-              <p className="text-gray-500 italic text-sm">"Autonomous analysis suggests your profile is optimized for a technical pivot. Timing is critical."</p>
+              <p className="text-gray-500 italic text-sm">"Autonomous engine analysis suggests your profile is currently optimized for a high-prestige move. Timing is critical."</p>
               <button 
                 onClick={() => setShowReadiness(false)}
                 className="w-full py-4 bg-blue-600 text-white font-bold rounded-2xl shadow-xl shadow-blue-500/20 active:scale-[0.98] transition-transform"
