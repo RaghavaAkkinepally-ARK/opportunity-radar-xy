@@ -62,26 +62,29 @@ function fallbackToMock(skills: string[], goals: string[]) {
   const searchTerms = [...new Set([...skills, ...goals])].map(s => s.toLowerCase());
   
   // STRICT FILTERING: Only show jobs that match the user's specific tech stack (e.g. Python)
+  // RELAXED FILTERING: If strict matches are few, we pad with the best relevant mock jobs
   let filteredJobs = mockOpportunities.filter(job => {
     const jobContent = `${job.title} ${job.description} ${job.requirements.join(' ')}`.toLowerCase();
     return searchTerms.some(term => jobContent.includes(term));
   });
 
-  // If strict filtering is too narrow, we sort mock data by relevance instead of a blind slice
-  if (filteredJobs.length === 0) {
-    filteredJobs = [...mockOpportunities].sort((a, b) => {
-      const aContent = `${a.title} ${a.requirements.join(' ')}`.toLowerCase();
-      const bContent = `${b.title} ${b.requirements.join(' ')}`.toLowerCase();
-      const aMatches = searchTerms.filter(term => aContent.includes(term)).length;
-      const bMatches = searchTerms.filter(term => bContent.includes(term)).length;
-      return bMatches - aMatches;
-    });
+  if (filteredJobs.length < 10) {
+    const additionalJobs = [...mockOpportunities]
+      .filter(job => !filteredJobs.some(f => f.id === job.id))
+      .sort((a, b) => {
+        const aContent = `${a.title} ${a.requirements.join(' ')}`.toLowerCase();
+        const bContent = `${b.title} ${b.requirements.join(' ')}`.toLowerCase();
+        const aMatches = searchTerms.filter(term => aContent.includes(term)).length;
+        const bMatches = searchTerms.filter(term => bContent.includes(term)).length;
+        return bMatches - aMatches;
+      });
+    filteredJobs = [...filteredJobs, ...additionalJobs];
   }
 
-  // Ensure all mock URLs are also redirected to functional LinkedIn searches
-  const optimizedJobs = filteredJobs.slice(0, 6).map(job => ({
+  // Ensure all mock URLs are also redirected to functional LinkedIn searches for high-intent application
+  const optimizedJobs = filteredJobs.slice(0, 12).map(job => ({
     ...job,
-    url: `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(job.title + " " + job.company)}`
+    url: `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(job.title + " " + job.company + " Apply")}`
   }));
 
   return NextResponse.json({

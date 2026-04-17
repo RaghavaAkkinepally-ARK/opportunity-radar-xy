@@ -9,6 +9,7 @@ import { AnalysisResult, Opportunity, UserProfile, DailySprint } from "@/types";
 import { analyzeOpportunity, generateDailySprints, rankOpportunities } from "@/lib/ai";
 import { useRouter } from "next/navigation";
 import { Search, Bell, Settings, LayoutDashboard, BrainCircuit, Sparkles, Zap, Target, TrendingUp } from "lucide-react";
+import { MemoryManager } from "@/lib/memory";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -109,10 +110,10 @@ export default function Dashboard() {
               <Bell size={24} />
               <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-black"></span>
             </button>
-            <div className="flex items-center gap-3">
-              <div className="text-right hidden md:block">
-                <p className="text-sm font-black">{profile.name || "Guest"}</p>
-                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Premium Member</p>
+            <div className="flex items-center gap-3 bg-gray-50 dark:bg-gray-900/50 px-4 py-2 rounded-2xl border border-gray-100 dark:border-gray-800">
+              <div className="text-right">
+                <p className="text-sm font-black leading-tight">{profile.name || "Guest"}</p>
+                <p className="text-[10px] text-blue-500 font-bold uppercase tracking-widest">Premium Member</p>
               </div>
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 border-2 border-white dark:border-gray-800 flex items-center justify-center text-white font-bold">
                 {profile.name ? profile.name[0] : "G"}
